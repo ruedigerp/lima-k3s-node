@@ -1,0 +1,43 @@
+# Reproducible NixOS + k3s Lima VM.
+#
+# The actual system state (packages, k3s, firewall, ...) is defined declaratively
+# in ./nixos/flake.nix + ./nixos/configuration.nix. That's what makes VMs built
+# from this file identical: not the act of running `limactl start`, but the
+# pinned flake applied on top of it.
+#
+# This file only boots the bare nixos-lima base image. Applying the flake is a
+# separate, one-time step (see ./bootstrap.sh) run after the VM is reachable --
+# NixOS's /etc/systemd/system is read-only and declaratively managed, so it
+# can't be done from an early boot-time provisioning script. Once applied, k3s
+# starts natively like any other NixOS service on every later boot.
+#
+# New VM from the same state:
+#   ./bootstrap.sh <new-name>
+#
+# Same state on another host/user, whose repo lives at a different absolute
+# path: ./bootstrap.sh <new-name> <path-to-nixos-dir-inside-that-guest>
+
+minimumLimaVersion: "1.1.0"
+
+base:
+  - "github:nixos-lima/nixos-lima"
+
+mounts:
+  # Write access to just this repo (not the whole home dir) so `nixos-rebuild`
+  # can create/update flake.lock, and it lands back in the git-tracked repo.
+  - location: "~/Code/lima"
+    writable: true
+
+portForwards:
+  # NixOS intercepts host DHCP broadcasts on udp/68 unless explicitly ignored.
+  # https://github.com/nixos-lima/nixos-lima/issues/50
+  - proto: udp
+    guestPort: 68
+    guestIP: 0.0.0.0
+    ignore: true
+  - guestPort: 80
+    hostPort: 280
+  - guestPort: 443
+    hostPort: 2443
+  - guestPort: 6443
+    hostPort: 62443
