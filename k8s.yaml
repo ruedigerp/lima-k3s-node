@@ -22,11 +22,10 @@ minimumLimaVersion: "1.1.0"
 base:
   - "github:nixos-lima/nixos-lima"
 
-mounts:
-  # Write access to just this repo (not the whole home dir) so `nixos-rebuild`
-  # can create/update flake.lock, and it lands back in the git-tracked repo.
-  - location: "~/Code/lima"
-    writable: true
+# The base template already mounts the home directory read-only, which is
+# enough for `nixos-rebuild` to read this flake. To update flake.lock from
+# inside the guest (`nix flake update`), start with all mounts writable:
+#   limactl start --mount-writable --name=<name> ./k8s.yaml
 
 portForwards:
   # NixOS intercepts host DHCP broadcasts on udp/68 unless explicitly ignored.
